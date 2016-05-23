@@ -12,19 +12,15 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import static android.opengl.GLES20.GL_COLOR_BUFFER_BIT;
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_FRAGMENT_SHADER;
 import static android.opengl.GLES20.GL_LINES;
 import static android.opengl.GLES20.GL_VERTEX_SHADER;
-import static android.opengl.GLES20.*;
-import static android.opengl.GLES20.glClear;
 import static android.opengl.GLES20.glClearColor;
 import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glEnableVertexAttribArray;
 import static android.opengl.GLES20.glGetAttribLocation;
-import static android.opengl.GLES20.glGetUniformLocation;
-import static android.opengl.GLES20.glUniform4f;
+import static android.opengl.GLES20.glLineWidth;
 import static android.opengl.GLES20.glUseProgram;
 import static android.opengl.GLES20.glVertexAttribPointer;
 import static android.opengl.GLES20.glViewport;
@@ -39,7 +35,7 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
     private int programId;
 
     private FloatBuffer vertexData;
-    private int uColorLocation;
+    private int aColorLocation;
     private int aPositionLocation;
 
     public OpenGLRenderer(Context context) {
@@ -64,42 +60,18 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
     private void prepareData() {
         float[] vertices = {
-// треугольник 1
-                -0.9f, 0.8f,
-                -0.9f, 0.2f,
-                -0.5f, 0.8f,
-
-                // треугольник 2
-                -0.6f, 0.2f,
-                -0.2f, 0.2f,
-                -0.2f, 0.8f,
-
-                // треугольник 3
-                0.1f, 0.8f,
-                0.1f, 0.2f,
-                0.5f, 0.8f,
-
-                // треугольник 4
-                0.1f, 0.2f,
-                0.5f, 0.2f,
-                0.5f, 0.8f,
-
                 // линия 1
-                -0.7f, -0.1f,
-                0.7f, -0.1f,
+                -0.4f, 0.6f, 1.0f, 0.0f, 0.0f,
+                0.4f, 0.6f, 0.0f, 1.0f, 0.0f,
 
                 // линия 2
-                -0.6f, -0.2f,
-                0.6f, -0.2f,
+                0.6f, 0.4f, 0.0f, 0.0f, 1.0f,
+                0.6f, -0.4f, 1.0f, 1.0f, 1.0f,
 
-                // точка 1
-                -0.5f, -0.3f,
+                // линия 3
+                0.4f, -0.6f, 1.0f, 1.0f, 0.0f,
+                -0.4f, -0.6f, 1.0f, 0.0f, 1.0f,
 
-                // точка 2
-                0.0f, -0.3f,
-
-                // точка 3
-                0.5f, -0.3f,
         };
 
         vertexData = ByteBuffer
@@ -110,31 +82,23 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
     }
 
     private void bindData(){
-        uColorLocation = glGetUniformLocation(programId, "u_Color");
-        //glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
 
+        // координаты
         aPositionLocation = glGetAttribLocation(programId, "a_Position");
         vertexData.position(0);
-        glVertexAttribPointer(aPositionLocation, 2, GL_FLOAT,
-                false, 0, vertexData);
+        glVertexAttribPointer(aPositionLocation, 2, GL_FLOAT, false, 20, vertexData);
         glEnableVertexAttribArray(aPositionLocation);
+
+        // цвет
+        aColorLocation = glGetAttribLocation(programId, "a_Color");
+        vertexData.position(2);
+        glVertexAttribPointer(aColorLocation, 3, GL_FLOAT, false, 20, vertexData);
+        glEnableVertexAttribArray(aColorLocation);
     }
 
     @Override
     public void onDrawFrame(GL10 arg0) {
-        glClear(GL_COLOR_BUFFER_BIT);
         glLineWidth(5);
-
-        // синие треугольники
-        glUniform4f(uColorLocation, 0.0f, 0.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 0, 12);
-
-        // зеленые линии
-        glUniform4f(uColorLocation, 0.0f, 1.0f, 0.0f, 1.0f);
-        glDrawArrays(GL_LINES, 12, 4);
-
-        // красные точки
-        glUniform4f(uColorLocation, 1.0f, 0.0f, 0.0f, 1.0f);
-        glDrawArrays(GL_POINTS, 16, 3);
+        glDrawArrays(GL_LINES, 0, 6);
     }
 }
