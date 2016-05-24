@@ -14,7 +14,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_FRAGMENT_SHADER;
-import static android.opengl.GLES20.GL_LINES;
+import static android.opengl.GLES20.GL_TRIANGLES;
 import static android.opengl.GLES20.GL_VERTEX_SHADER;
 import static android.opengl.GLES20.glClearColor;
 import static android.opengl.GLES20.glDrawArrays;
@@ -60,18 +60,9 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
     private void prepareData() {
         float[] vertices = {
-                // линия 1
-                -0.4f, 0.6f, 1.0f, 0.0f, 0.0f,
-                0.4f, 0.6f, 0.0f, 1.0f, 0.0f,
-
-                // линия 2
-                0.6f, 0.4f, 0.0f, 0.0f, 1.0f,
-                0.6f, -0.4f, 1.0f, 1.0f, 1.0f,
-
-                // линия 3
-                0.4f, -0.6f, 1.0f, 1.0f, 0.0f,
-                -0.4f, -0.6f, 1.0f, 0.0f, 1.0f,
-
+                -0.5f, -0.2f, 1.0f, 0.0f, 0.0f,
+                0.0f, 0.2f, 0.0f, 1.0f, 0.0f,
+                0.5f, -0.2f, 0.0f, 0.0f, 1.0f,
         };
 
         vertexData = ByteBuffer
@@ -99,6 +90,6 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onDrawFrame(GL10 arg0) {
         glLineWidth(5);
-        glDrawArrays(GL_LINES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
     }
 }
