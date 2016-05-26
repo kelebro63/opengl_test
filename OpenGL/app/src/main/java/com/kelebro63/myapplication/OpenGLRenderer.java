@@ -3,6 +3,7 @@ package com.kelebro63.myapplication;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.SystemClock;
 
 import com.kelebro63.myapplication.Utils.ShaderUtils;
 import com.kelebro63.myapplication.Utils.TextureUtils;
@@ -20,14 +21,11 @@ import static android.opengl.GLES20.GL_DEPTH_TEST;
 import static android.opengl.GLES20.GL_FLOAT;
 import static android.opengl.GLES20.GL_FRAGMENT_SHADER;
 import static android.opengl.GLES20.GL_TEXTURE0;
-import static android.opengl.GLES20.GL_TEXTURE_2D;
-import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
 import static android.opengl.GLES20.GL_VERTEX_SHADER;
 import static android.opengl.GLES20.glActiveTexture;
 import static android.opengl.GLES20.glBindTexture;
 import static android.opengl.GLES20.glClear;
 import static android.opengl.GLES20.glClearColor;
-import static android.opengl.GLES20.glDrawArrays;
 import static android.opengl.GLES20.glEnable;
 import static android.opengl.GLES20.glEnableVertexAttribArray;
 import static android.opengl.GLES20.glGetAttribLocation;
@@ -36,24 +34,20 @@ import static android.opengl.GLES20.glUniform1i;
 import static android.opengl.GLES20.glUniformMatrix4fv;
 import static android.opengl.GLES20.glUseProgram;
 import static android.opengl.GLES20.glVertexAttribPointer;
-import static android.opengl.GLES20.glViewport;
+import static android.opengl.GLES20.*;
 
 /**
  * Created by Bistrov Alexey on 23.05.2016.
  */
 public class OpenGLRenderer implements GLSurfaceView.Renderer {
     private final static int POSITION_COUNT = 3;
-    private static final int TEXTURE_COUNT = 2;
-    private static final int STRIDE = (POSITION_COUNT
-            + TEXTURE_COUNT) * 4;
 
     private Context context;
 
     private FloatBuffer vertexData;
-
+    private ByteBuffer indexArray;
 
     private int aPositionLocation;
-    private int aTextureLocation;
     private int uTextureUnitLocation;
     private int uMatrixLocation;
 
@@ -61,6 +55,7 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
     private float[] mProjectionMatrix = new float[16];
     private float[] mViewMatrix = new float[16];
+    private float[] mModelMatrix = new float[16];
     private float[] mMatrix = new float[16];
 
     private int texture;
@@ -79,6 +74,7 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
         prepareData();
         bindData();
         createViewMatrix();
+        Matrix.setIdentityM(mModelMatrix, 0);
     }
 
     @Override
@@ -91,10 +87,15 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
     private void prepareData() {
 
         float[] vertices = {
-                -1,  1, 1,   0, 0,
-                -1, -1, 1,   0, 1,
-                1,  1, 1,   1, 0,
-                1, -1, 1,   1, 1,
+                // вершины куба
+                -1,  1,  1,     // верхняя левая ближняя
+                1,  1,  1,     // верхняя правая ближняя
+                -1, -1,  1,     // нижняя левая ближняя
+                1, -1,  1,     // нижняя правая ближняя
+                -1,  1, -1,     // верхняя левая дальняя
+                1,  1, -1,     // верхняя правая дальняя
+                -1, -1, -1,     // нижняя левая дальняя
+                1, -1, -1      // нижняя правая дальняя
         };
 
         vertexData = ByteBuffer
@@ -103,7 +104,38 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
                 .asFloatBuffer();
         vertexData.put(vertices);
 
-        texture = TextureUtils.loadTexture(context, R.drawable.box);
+        indexArray =  ByteBuffer.allocateDirect(36)
+                .put(new byte[] {
+                        // грани куба
+                        // ближняя
+                        1, 3, 0,
+                        0, 3, 2,
+
+                        // дальняя
+                        4, 6, 5,
+                        5, 6, 7,
+
+                        // левая
+                        0, 2, 4,
+                        4, 2, 6,
+
+                        // правая
+                        5, 7, 1,
+                        1, 7, 3,
+
+                        // верхняя
+                        5, 1, 4,
+                        4, 1, 0,
+
+                        // нижняя
+                        6, 2, 7,
+                        7, 2, 3
+                });
+        indexArray.position(0);
+
+        texture = TextureUtils.loadTextureCube(context, new int[]{R.drawable.box0, R.drawable.box1,
+                R.drawable.box2, R.drawable.box3,
+                R.drawable.box4, R.drawable.box5});
     }
 
     private void createAndUseProgram() {
@@ -115,7 +147,6 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
     private void getLocations() {
         aPositionLocation = glGetAttribLocation(programId, "a_Position");
-        aTextureLocation = glGetAttribLocation(programId, "a_Texture");
         uTextureUnitLocation = glGetUniformLocation(programId, "u_TextureUnit");
         uMatrixLocation = glGetUniformLocation(programId, "u_Matrix");
     }
@@ -124,21 +155,16 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
         // координаты вершин
         vertexData.position(0);
         glVertexAttribPointer(aPositionLocation, POSITION_COUNT, GL_FLOAT,
-                false, STRIDE, vertexData);
+                false, 0, vertexData);
         glEnableVertexAttribArray(aPositionLocation);
 
-        // координаты текстур
-        vertexData.position(POSITION_COUNT);
-        glVertexAttribPointer(aTextureLocation, TEXTURE_COUNT, GL_FLOAT,
-                false, STRIDE, vertexData);
-        glEnableVertexAttribArray(aTextureLocation);
-
-        // помещаем текстуру в target 2D юнита 0
+        // помещаем текстуру в target CUBE_MAP юнита 0
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 
         // юнит текстуры
         glUniform1i(uTextureUnitLocation, 0);
+
     }
 
     private void createProjectionMatrix(int width, int height) {
@@ -165,8 +191,8 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
     private void createViewMatrix() {
         // точка положения камеры
         float eyeX = 0;
-        float eyeY = 0;
-        float eyeZ = 7;
+        float eyeY = 2;
+        float eyeZ = 4;
 
         // точка направления камеры
         float centerX = 0;
@@ -183,13 +209,29 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
 
     private void bindMatrix() {
-        Matrix.multiplyMM(mMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+
+        Matrix.multiplyMM(mMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
+        Matrix.multiplyMM(mMatrix, 0, mProjectionMatrix, 0, mMatrix, 0);
         glUniformMatrix4fv(uMatrixLocation, 1, false, mMatrix, 0);
     }
+
+    long TIME = 10000L;
 
     @Override
     public void onDrawFrame(GL10 arg0) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        Matrix.setIdentityM(mModelMatrix, 0);
+
+        // вращение
+        //setModelMatrix();
+
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, indexArray);
     }
+
+    private void setModelMatrix() {
+        float angle = (float)(SystemClock.uptimeMillis() % TIME) / TIME * 360;
+        Matrix.rotateM(mModelMatrix, 0, angle, 0, 1, 0);
+        bindMatrix();
+    }
+
 }
