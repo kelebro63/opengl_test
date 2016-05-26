@@ -135,7 +135,7 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
 
         texture = TextureUtils.loadTextureCube(context, new int[]{R.drawable.box0, R.drawable.box1,
                 R.drawable.box2, R.drawable.box3,
-                R.drawable.box4, R.drawable.box5});
+                R.drawable.box4, R.drawable.s1});
     }
 
     private void createAndUseProgram() {
@@ -223,7 +223,7 @@ public class OpenGLRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(mModelMatrix, 0);
 
         // вращение
-        //setModelMatrix();
+        setModelMatrix();
 
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_BYTE, indexArray);
     }
